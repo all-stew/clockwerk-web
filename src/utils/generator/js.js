@@ -1,5 +1,5 @@
 import { isArray } from 'util'
-import { exportDefault, titleCase } from '@/utils/generator/index'
+import { exportDefault, titleCase } from '@/utils/index'
 import { trigger } from './config'
 
 const units = {
@@ -12,6 +12,7 @@ const inheritAttrs = {
   file: '',
   dialog: 'inheritAttrs: false,'
 }
+
 
 export function makeUpJs(conf, type) {
   confGlobal = conf = JSON.parse(JSON.stringify(conf))
@@ -97,7 +98,7 @@ function mixinMethod(type) {
         close: `close() {
         this.$emit('update:visible', false)
       },`,
-        handelConfirm: `handelConfirm() {
+        handleConfirm: `handleConfirm() {
         this.$refs['${confGlobal.formRef}'].validate(valid => {
           if(!valid) return
           this.close()
@@ -140,7 +141,6 @@ function buildRules(conf, ruleList) {
     if (conf.regList && isArray(conf.regList)) {
       conf.regList.forEach(item => {
         if (item.pattern) {
-          // eslint-disable-next-line no-eval
           rules.push(`{ pattern: ${eval(item.pattern)}, message: '${item.message}', trigger: '${trigger[conf.tag]}' }`)
         }
       })

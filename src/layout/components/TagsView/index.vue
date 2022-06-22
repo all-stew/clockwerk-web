@@ -1,50 +1,46 @@
 <template>
   <div id="tags-view-container" class="tags-view-container">
-    <el-tabs
-      v-model="editableTabsValue"
-      type="card"
-      @tab-remove="closeSelectedTag"
-    >
-      <el-tab-pane
-        v-for="item in visitedViews"
-        :key="item.path"
-        :closable="item.fullPath === '/dashboard' ? false : true"
-        :name="item.fullPath"
+    <scroll-pane ref="scrollPane" class="tags-view-wrapper" @scroll="handleScroll">
+      <router-link
+        v-for="tag in visitedViews"
+        ref="tag"
+        :key="tag.path"
+        :class="isActive(tag)?'active':''"
+        :to="{ path: tag.path, query: tag.query, fullPath: tag.fullPath }"
+        tag="span"
+        class="tags-view-item"
+        :style="activeStyle(tag)"
+        @click.middle.native="!isAffix(tag)?closeSelectedTag(tag):''"
+        @contextmenu.prevent.native="openMenu(tag,$event)"
       >
-        <router-link
-          ref="tag"
-          slot="label"
-          tag="span"
-          class="tags-view-item"
-          :style="{ color: item.fullPath === $route.fullPath ? theme : '' }"
-          :to="{ path: item.path, query: item.query, fullPath: item.fullPath }"
-          @contextmenu.prevent.native="openMenu(item,$event)"
-        >
-          {{ item.title }}
-        </router-link>
-      </el-tab-pane>
-    </el-tabs>
+        {{ tag.title }}
+        <span v-if="!isAffix(tag)" class="el-icon-close" @click.prevent.stop="closeSelectedTag(tag)" />
+      </router-link>
+    </scroll-pane>
     <ul v-show="visible" :style="{left:left+'px',top:top+'px'}" class="contextmenu">
-      <li class="tags-item" @click="refreshSelectedTag(selectedTag)" @mouseover="handleTagsOver(1)" @mouseleave="handleTagsLeave(1)">刷新当前标签页</li>
-      <li v-if="!isAffix(selectedTag)" class="tags-item" @click="closeSelectedTag(selectedTag)" @mouseover="handleTagsOver(2)" @mouseleave="handleTagsLeave(2)">关闭当前标签页</li>
-      <li class="tags-item" @click="closeOthersTags" @mouseover="handleTagsOver(3)" @mouseleave="handleTagsLeave(3)">关闭其他标签页</li>
-      <li class="tags-item" @click="closeAllTags(selectedTag)" @mouseover="handleTagsOver(4)" @mouseleave="handleTagsLeave(4)">关闭全部标签页</li>
+      <li @click="refreshSelectedTag(selectedTag)"><i class="el-icon-refresh-right"></i> 刷新页面</li>
+      <li v-if="!isAffix(selectedTag)" @click="closeSelectedTag(selectedTag)"><i class="el-icon-close"></i> 关闭当前</li>
+      <li @click="closeOthersTags"><i class="el-icon-circle-close"></i> 关闭其他</li>
+      <li v-if="!isFirstView()" @click="closeLeftTags"><i class="el-icon-back"></i> 关闭左侧</li>
+      <li v-if="!isLastView()" @click="closeRightTags"><i class="el-icon-right"></i> 关闭右侧</li>
+      <li @click="closeAllTags(selectedTag)"><i class="el-icon-circle-close"></i> 全部关闭</li>
     </ul>
   </div>
 </template>
 
 <script>
+import ScrollPane from './ScrollPane'
 import path from 'path'
 
 export default {
+  components: { ScrollPane },
   data() {
     return {
-      editableTabsValue: '/',
+      visible: false,
       top: 0,
       left: 0,
       selectedTag: {},
-      affixTags: [],
-      visible: false
+      affixTags: []
     }
   },
   computed: {
@@ -55,12 +51,13 @@ export default {
       return this.$store.state.permission.routes
     },
     theme() {
-      return this.$store.state.settings.theme
+      return this.$store.state.settings.theme;
     }
   },
   watch: {
     $route() {
       this.addTags()
+      this.moveToCurrentTag()
     },
     visible(value) {
       if (value) {
@@ -73,28 +70,34 @@ export default {
   mounted() {
     this.initTags()
     this.addTags()
-    this.isActive()
   },
   methods: {
-    handleTagsOver(index) {
-      const tags = document.querySelectorAll('.tags-item')
-      const item = tags[index - 1]
-      item.style.cssText = `color:${this.$store.state.settings.theme};background:${
-        this.$store.state.settings.theme.colorRgb()
-      }`
+    isActive(route) {
+      return route.path === this.$route.path
     },
-    handleTagsLeave(index) {
-      const tags = document.querySelectorAll('.tags-item')
-      const item = tags[index - 1]
-      item.style.cssText = `color:#606266`
-    },
-    isActive() {
-      const index = this.visitedViews.findIndex(item => item.fullPath === this.$route.fullPath)
-      const pathIndex = index > -1 ? index : 0
-      this.editableTabsValue = this.visitedViews[pathIndex].fullPath
+    activeStyle(tag) {
+      if (!this.isActive(tag)) return {};
+      return {
+        "background-color": this.theme,
+        "border-color": this.theme
+      };
     },
     isAffix(tag) {
       return tag.meta && tag.meta.affix
+    },
+    isFirstView() {
+      try {
+        return this.selectedTag.fullPath === this.visitedViews[1].fullPath || this.selectedTag.fullPath === '/index'
+      } catch (err) {
+        return false
+      }
+    },
+    isLastView() {
+      try {
+        return this.selectedTag.fullPath === this.visitedViews[this.visitedViews.length - 1].fullPath
+      } catch (err) {
+        return false
+      }
     },
     filterAffixTags(routes, basePath = '/') {
       let tags = []
@@ -130,7 +133,6 @@ export default {
       const { name } = this.$route
       if (name) {
         this.$store.dispatch('tagsView/addView', this.$route)
-        this.isActive()
       }
       return false
     },
@@ -139,7 +141,7 @@ export default {
       this.$nextTick(() => {
         for (const tag of tags) {
           if (tag.to.path === this.$route.path) {
-            // this.$refs.scrollPane.moveToTarget(tag)
+            this.$refs.scrollPane.moveToTarget(tag)
             // when query is different then update
             if (tag.to.fullPath !== this.$route.fullPath) {
               this.$store.dispatch('tagsView/updateVisitedView', this.$route)
@@ -150,36 +152,38 @@ export default {
       })
     },
     refreshSelectedTag(view) {
-      this.$store.dispatch('tagsView/delCachedView', view).then(() => {
-        const { fullPath } = view
-        this.$nextTick(() => {
-          this.$router.replace({
-            path: '/redirect' + fullPath
-          })
-        })
-      })
+      this.$tab.refreshPage(view);
     },
     closeSelectedTag(view) {
-      const routerPath = view.fullPath ? view.fullPath : view
-      const index = this.visitedViews.findIndex(item => item.fullPath === routerPath)
-      if (index > -1) {
-        const path = this.visitedViews[index]
-        this.$store.dispatch('tagsView/delView', path).then(({ visitedViews }) => {
-          if (this.editableTabsValue === path.fullPath) {
-            this.toLastView(visitedViews, path)
-          }
-        })
-      }
+      this.$tab.closePage(view).then(({ visitedViews }) => {
+        if (this.isActive(view)) {
+          this.toLastView(visitedViews, view)
+        }
+      })
+    },
+    closeRightTags() {
+      this.$tab.closeRightPage(this.selectedTag).then(visitedViews => {
+        if (!visitedViews.find(i => i.fullPath === this.$route.fullPath)) {
+          this.toLastView(visitedViews)
+        }
+      })
+    },
+    closeLeftTags() {
+      this.$tab.closeLeftPage(this.selectedTag).then(visitedViews => {
+        if (!visitedViews.find(i => i.fullPath === this.$route.fullPath)) {
+          this.toLastView(visitedViews)
+        }
+      })
     },
     closeOthersTags() {
-      this.$router.push(this.selectedTag.path).catch(e => e)
-      this.$store.dispatch('tagsView/delOthersViews', this.selectedTag).then(() => {
+      this.$router.push(this.selectedTag).catch(()=>{});
+      this.$tab.closeOtherPage(this.selectedTag).then(() => {
         this.moveToCurrentTag()
       })
     },
     closeAllTags(view) {
-      this.$store.dispatch('tagsView/delAllViews').then(({ visitedViews }) => {
-        if (this.affixTags.some(tag => tag.path === view.path)) {
+      this.$tab.closeAllPage().then(({ visitedViews }) => {
+        if (this.affixTags.some(tag => tag.path === this.$route.path)) {
           return
         }
         this.toLastView(visitedViews, view)
@@ -188,7 +192,7 @@ export default {
     toLastView(visitedViews, view) {
       const latestView = visitedViews.slice(-1)[0]
       if (latestView) {
-        this.$router.push(latestView.fullPath).catch(err => err)
+        this.$router.push(latestView.fullPath)
       } else {
         // now the default is to redirect to the home page if there is no tags-view,
         // you can adjust it according to your needs.
@@ -219,51 +223,21 @@ export default {
     },
     closeMenu() {
       this.visible = false
+    },
+    handleScroll() {
+      this.closeMenu()
     }
-  }
-}
-
-// eslint-disable-next-line no-extend-native
-String.prototype.colorRgb = function() {
-  let sColor = this.toLowerCase()
-  const reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/
-  if (sColor && reg.test(sColor)) {
-    if (sColor.length === 4) {
-      let sColorNew = '#'
-      for (let i = 1; i < 4; i += 1) {
-        sColorNew += sColor.slice(i, i + 1).concat(sColor.slice(i, i + 1))
-      }
-      sColor = sColorNew
-    }
-    const sColorChange = []
-    for (let i = 1; i < 7; i += 2) {
-      sColorChange.push(parseInt('0x' + sColor.slice(i, i + 2)))
-    }
-    return 'rgba(' + sColorChange.join(',') + ',0.2)'
-  } else {
-    return sColor
   }
 }
 </script>
 
 <style lang="scss" scoped>
-.tags-view-container ::v-deep{
-  height: 43px;
+.tags-view-container {
+  height: 34px;
   width: 100%;
   background: #fff;
   border-bottom: 1px solid #d8dce5;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, .12), 0 0 3px 0 rgba(0, 0, 0, .04);
-  padding: 0 15px;
-  box-sizing: border-box;
-  .el-tabs__item{
-    &:hover{
-      color: #000;
-    }
-  }
-  .tags-view-item{
-    height: 40px;
-    display: inline-block;
-  }
   .tags-view-wrapper {
     .tags-view-item {
       display: inline-block;
@@ -312,19 +286,10 @@ String.prototype.colorRgb = function() {
     font-size: 12px;
     font-weight: 400;
     color: #333;
-    box-shadow: 1px 2px 10px #ccc;
-    -moz-user-select:none;
-    -webkit-user-select:none;
-    user-select:none;
+    box-shadow: 2px 2px 3px 0 rgba(0, 0, 0, .3);
     li {
-      list-style: none;
-      line-height: 36px;
-      padding: 2px 20px;
       margin: 0;
-      font-size: 14px;
-      color: #606266;
-      cursor: pointer;
-      outline: 0;
+      padding: 7px 16px;
       cursor: pointer;
       &:hover {
         background: #eee;

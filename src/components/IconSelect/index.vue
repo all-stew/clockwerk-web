@@ -1,3 +1,4 @@
+<!-- @author zhengjie -->
 <template>
   <div class="icon-body">
     <el-input v-model="name" style="position: relative;" clearable placeholder="请输入图标名称" @clear="filterIcons" @input.native="filterIcons">
@@ -24,10 +25,9 @@ export default {
   },
   methods: {
     filterIcons() {
+      this.iconList = icons
       if (this.name) {
         this.iconList = this.iconList.filter(item => item.includes(this.name))
-      } else {
-        this.iconList = icons
       }
     },
     selectedIcon(name) {

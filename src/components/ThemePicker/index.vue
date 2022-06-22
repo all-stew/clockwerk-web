@@ -1,7 +1,7 @@
 <template>
   <el-color-picker
     v-model="theme"
-    :predefine="['#1890FF', '#F5222D', '#FA541C','#FAAD14','#13C2C2', '#52C460', '#2F54EB', '#722ED1', '#00b38a', '#2878FF']"
+    :predefine="['#409EFF', '#1890ff', '#304156','#212121','#11a983', '#13c2c2', '#6959CD', '#f5222d', ]"
     class="theme-picker"
     popper-class="theme-picker-dropdown"
   />
@@ -9,7 +9,7 @@
 
 <script>
 const version = require('element-ui/package.json').version // element-ui version from node_modules
-const ORIGINAL_THEME = '#1890FF' // default color
+const ORIGINAL_THEME = '#409EFF' // default color
 
 export default {
   data() {
@@ -31,18 +31,21 @@ export default {
       immediate: true
     },
     async theme(val) {
+      await this.setTheme(val)
+    }
+  },
+  created() {
+    if(this.defaultTheme !== ORIGINAL_THEME) {
+      this.setTheme(this.defaultTheme)
+    }
+  },
+
+  methods: {
+    async setTheme(val) {
       const oldVal = this.chalk ? this.theme : ORIGINAL_THEME
       if (typeof val !== 'string') return
       const themeCluster = this.getThemeCluster(val.replace('#', ''))
       const originalCluster = this.getThemeCluster(oldVal.replace('#', ''))
-
-      const $message = this.$message({
-        message: '编译主题中',
-        customClass: 'theme-message',
-        type: 'success',
-        duration: 0,
-        iconClass: 'el-icon-loading'
-      })
 
       const getHandler = (variable, id) => {
         return () => {
@@ -78,12 +81,10 @@ export default {
         if (typeof innerText !== 'string') return
         style.innerText = this.updateStyle(innerText, originalCluster, themeCluster)
       })
-      this.$emit('change', val)
-      $message.close()
-    }
-  },
 
-  methods: {
+      this.$emit('change', val)
+    },
+
     updateStyle(style, oldCluster, newCluster) {
       let newStyle = style
       oldCluster.forEach((color, index) => {

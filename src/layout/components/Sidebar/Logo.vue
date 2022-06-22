@@ -1,22 +1,21 @@
 <template>
-  <div class="sidebar-logo-container" :class="{'collapse':collapse}" :style="{ backgroundColor: $store.state.settings.themeStyle === 'dark' ? variables.menuBg : variables.menuLightBg }">
+  <div class="sidebar-logo-container" :class="{'collapse':collapse}" :style="{ backgroundColor: sideTheme === 'theme-dark' ? variables.menuBackground : variables.menuLightBackground }">
     <transition name="sidebarLogoFade">
       <router-link v-if="collapse" key="collapse" class="sidebar-logo-link" to="/">
-        <img v-if="appInfo.sys_app_logo" :src="appInfo.sys_app_logo" class="sidebar-logo">
-        <h1 v-else class="sidebar-title" :style="{ color: $store.state.settings.themeStyle === 'dark' ? variables.sidebarTitle : variables.sidebarLightTitle }">{{ appInfo.sys_app_name }} </h1>
+        <img v-if="logo" :src="logo" class="sidebar-logo" />
+        <h1 v-else class="sidebar-title" :style="{ color: sideTheme === 'theme-dark' ? variables.logoTitleColor : variables.logoLightTitleColor }">{{ title }} </h1>
       </router-link>
       <router-link v-else key="expand" class="sidebar-logo-link" to="/">
-        <img v-if="appInfo.sys_app_logo" :src="appInfo.sys_app_logo" class="sidebar-logo">
-        <h1 class="sidebar-title" :style="{ color: $store.state.settings.themeStyle === 'dark' ? variables.sidebarTitle : variables.sidebarLightTitle }">{{ appInfo.sys_app_name }} </h1>
+        <img v-if="logo" :src="logo" class="sidebar-logo" />
+        <h1 class="sidebar-title" :style="{ color: sideTheme === 'theme-dark' ? variables.logoTitleColor : variables.logoLightTitleColor }">{{ title }} </h1>
       </router-link>
     </transition>
   </div>
 </template>
 
 <script>
-
-import variables from '@/styles/variables.scss'
-import { mapGetters } from 'vuex'
+import logoImg from '@/assets/logo/logo.png'
+import variables from '@/assets/styles/variables.scss'
 
 export default {
   name: 'SidebarLogo',
@@ -27,11 +26,17 @@ export default {
     }
   },
   computed: {
-    ...mapGetters([
-      'appInfo'
-    ]),
     variables() {
-      return variables
+      return variables;
+    },
+    sideTheme() {
+      return this.$store.state.settings.sideTheme
+    }
+  },
+  data() {
+    return {
+      title: '若依管理系统',
+      logo: logoImg
     }
   }
 }
@@ -50,9 +55,9 @@ export default {
 .sidebar-logo-container {
   position: relative;
   width: 100%;
-  height: 64px;
-  line-height: 64px;
-  background: #001529;
+  height: 50px;
+  line-height: 50px;
+  background: #2b2f3a;
   text-align: center;
   overflow: hidden;
 
@@ -65,7 +70,6 @@ export default {
       height: 32px;
       vertical-align: middle;
       margin-right: 12px;
-      border-radius: 3px;
     }
 
     & .sidebar-title {
@@ -82,8 +86,7 @@ export default {
 
   &.collapse {
     .sidebar-logo {
-      margin-right: 0;
-      border-radius: 3px;
+      margin-right: 0px;
     }
   }
 }
