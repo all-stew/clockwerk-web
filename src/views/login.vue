@@ -23,9 +23,9 @@
           <svg-icon slot="prefix" icon-class="password" class="el-input__icon input-icon" />
         </el-input>
       </el-form-item>
-      <el-form-item prop="code" v-if="captchaOnOff">
+      <el-form-item prop="captcha" v-if="captchaOnOff">
         <el-input
-          v-model="loginForm.code"
+          v-model="loginForm.captcha"
           auto-complete="off"
           placeholder="验证码"
           style="width: 63%"
@@ -75,8 +75,8 @@ export default {
         username: "",
         password: "",
         rememberMe: false,
-        code: "",
-        uuid: ""
+        captcha: "",
+        captcha_id: ""
       },
       loginRules: {
         username: [
@@ -85,7 +85,7 @@ export default {
         password: [
           { required: true, trigger: "blur", message: "请输入您的密码" }
         ],
-        code: [{ required: true, trigger: "change", message: "请输入验证码" }]
+        captcha: [{ required: true, trigger: "change", message: "请输入验证码" }]
       },
       loading: false,
       // 验证码开关
@@ -110,11 +110,8 @@ export default {
   methods: {
     getCaptcha() {
       getCaptcha().then(res => {
-        // this.captchaOnOff = res.captchaOnOff === undefined ? true : res.captchaOnOff;
-        // if (this.captchaOnOff) {
         this.captchaBase64 = res.data.captcha;
-        this.loginForm.uuid = res.data.captchaId;
-        // }
+        this.loginForm.captcha_id = res.data.captchaId;
       });
     },
     getCookie() {
@@ -145,7 +142,7 @@ export default {
           }).catch(() => {
             this.loading = false;
             if (this.captchaOnOff) {
-              this.getCode();
+              this.getCaptcha();
             }
           });
         }
